@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{collections::BTreeSet, fs::File};
 use std::io::Read;
 
 use anyhow::{bail, Context, Result};
@@ -60,9 +60,14 @@ pub trait Engine: Clone + Send + Sync + 'static {
     /// The cached, precompiled layers will be reloaded on subsequent runs.
     /// The runtime is expected to return the same number of layers passed in, if the layer cannot be precompiled it should return `None` for that layer.
     /// In some edge cases it is possible that the layers may already be precompiled and None should be returned in this case.
-    fn precompile(&self, _layers: &[WasmLayer]) -> Result<Vec<Option<Vec<u8>>>> {
+    fn precompile(&self, _layers: &[WasmLayer]) -> Result<Vec<PrecompiledLayer>> {
         bail!("precompile not supported");
     }
+
+    // // TODO: process-layers
+    // fn process_layers(&self, _layers: &[WasmLayer]) -> Result<LayerGraph> {
+    //     bail!("process_layers not supported");
+    // }
 
     /// Can_precompile lets the shim know if the runtime supports precompilation.
     /// When it returns Some(unique_string) the `unique_string` will be used as a cache key for the precompiled module.
@@ -78,4 +83,15 @@ pub trait Engine: Clone + Send + Sync + 'static {
     fn can_precompile(&self) -> Option<String> {
         None
     }
+}
+
+/// A `PrecompiledLayer` represents the precompiled bytes of a layer and the indices of dependency layers (if any) used to process it.
+pub struct PrecompiledLayer {
+    /// The media type this layer represents.
+    pub media_type: String,
+    /// The bytes of the precompiled layer.
+    pub bytes: Vec<u8>,
+    /// Indices of this layers' parents.
+    /// TODO: use digest of parent layer
+    pub parents: BTreeSet<usize>,
 }
